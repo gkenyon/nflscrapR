@@ -1,9 +1,6 @@
-library(tidyverse)
-library(readr)
-library(dplyr)
-library(na.tools)
-library(ggimage)
-library(nflscrapR)
+nflpackages <- c('devtools', 'nflscrapR', 'XML', 'bitops', 'RCurl', 'ggplot2', 'nnet', 'magrittr', 'bindrcpp', 'tidyverse', 'tibble', 'tidyr', 'readr', 'purrr', 'dplyr', 'ggjoy')
+lapply(nflpackages, require, character.only = TRUE)
+
 #write_csv works best
 
 setwd("~/GitHub/nflscrapR/data/RAW")
@@ -11,17 +8,20 @@ setwd("~/GitHub/nflscrapR/data/RAW")
 # Update 2019 season as it progresses:
 reg_pbp_19 <- read_csv("~/GitHub/nflscrapR/data/RAW/reg_pbp_2019.csv")
 
+week == 
+
 # Latest week - just modify the week number:
-new_week_pbp_19 <- scrape_season_play_by_play(2019, type = "reg", weeks = 2)
+new_week_pbp_19 <- scrape_season_play_by_play(2019, type = "reg", weeks = week)
 
 #Write CSV as latest_week
-write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data/RAW/pbp_wk2.csv")
+write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data/RAW/pbp_wk .csv")
 write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data/RAW/new_week_pbp_2019.csv")
-new_week_pbp_19 <- read_csv2("~/GitHub/nflscrapR/data/RAW/new_week_pbp_2019.csv")
+new_week_pbp_19 <- read_csv("~/GitHub/nflscrapR/data/RAW/new_week_pbp_2019.csv")
 
 # Append to the data and save:
 reg_pbp_19 <- dplyr::bind_rows(reg_pbp_19, new_week_pbp_19)
 write_csv(reg_pbp_19, "~/GitHub/nflscrapR/data/RAW/reg_pbp_2019.csv")
+write_csv(reg_pbp_19, "~/GitHub/nflscrapR/data-scrapR/pbp_2019.csv")
 
 #Keep only Runs and Passes
 pbp <- read_csv("reg_pbp_2019.csv")
