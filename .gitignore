@@ -2,7 +2,8 @@
 .Rhistory
 .RData
 inst/doc
-\data\*
+/data
+data/raw
 data-scrapR/
 
 packrat/lib*/
