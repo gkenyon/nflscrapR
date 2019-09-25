@@ -6,19 +6,19 @@ lapply(nflpackages, require, character.only = TRUE)
 setwd("~/GitHub/nflscrapR/data/RAW")
 
 # Update 2019 season as it progresses:
-reg_pbp_19 <- read_csv("~/GitHub/nflscrapR/data/RAW/reg_pbp_2019.csv")
+reg_pbp_19 <- read_csv("~/GitHub/nflscrapR/data-scrapR/raw/reg_pbp_2019.csv")
 
 # Latest week - just modify the week number:
 new_week_pbp_19 <- scrape_season_play_by_play(2019, type = "reg", weeks = 3)
 
 #Write CSV as latest_week
-write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data/RAW/pbp_wk3.csv")
-write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data/RAW/new_week_pbp_2019.csv")
-new_week_pbp_19 <- read_csv("~/GitHub/nflscrapR/data/RAW/new_week_pbp_2019.csv")
+write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/pbp_wk3.csv")
+write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/new_week_pbp_2019.csv")
+new_week_pbp_19 <- read_csv("~/GitHub/nflscrapR/data-scrapR/raw/new_week_pbp_2019.csv")
 
 # Append to the data and save:
 reg_pbp_19 <- dplyr::bind_rows(reg_pbp_19, new_week_pbp_19)
-write_csv(reg_pbp_19, "~/GitHub/nflscrapR/data/RAW/reg_pbp_2019.csv")
+write_csv(reg_pbp_19, "~/GitHub/nflscrapR/data-scrapR/raw/reg_pbp_2019.csv")
 write_csv(reg_pbp_19, "~/GitHub/nflscrapR/data-scrapR/pbp_2019.csv")
 
 #Keep only Runs and Passes for 2019
@@ -33,7 +33,7 @@ pbp_rp <- pbp_rp %>%
       success = ifelse(epa>0, 1 , 0)
       )
 pbp_rp_19 <- pbp_rp %>% filter(pass==1 | rush==1)
-write_csv(pbp_rp, "~/Github/nflscrapR/data/raw/2019_pbp_rp.csv")
+write_csv(pbp_rp, "~/Github/nflscrapR/data-scrapR/raw/2019_pbp_rp.csv")
 
 #Read in old data, join and save.
 pbp_all_rp <- readRDS("~/GitHub/nflscrapR/data-scrapR/pbp_all_rp.rds")
@@ -54,8 +54,8 @@ saveRDS(reg_pbp_all_rp, "~/Github/nflscrapR/data-scrapR/reg_pbp_all_rp.rds")
 # }
 # 
 # pbp_all <- bind_rows(datalist)
-# write_csv(pbp_all, "~/Github/nflscrapR/data/RAW/pbp_all.csv")
-# saveRDS(pbp_all, file="~/Github/nflscrapR/data/RAW/pbp_all.rds")
+# write_csv(pbp_all, "~/Github/nflscrapR/data-scrapR/raw/pbp_all.csv")
+# saveRDS(pbp_all, file="~/Github/nflscrapR/data-scrapR/raw/pbp_all.rds")
 # 
 # 
 # #aDOT
