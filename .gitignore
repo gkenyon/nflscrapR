@@ -8,3 +8,4 @@ data-scrapR/
 
 packrat/lib*/
 *.csv
+*.rds
