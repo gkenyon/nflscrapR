@@ -1,7 +1,7 @@
-devtools::install_github(repo = "maksimhorowitz/nflscrapR")
-# Access nflscrapR:
+nflpackages <- c('devtools', 'nflscrapR', 'XML', 'bitops', 'RCurl', 'ggplot2', 'nnet', 'magrittr', 'bindrcpp', 'tidyverse', 'tibble', 'tidyr', 'readr', 'purrr', 'dplyr', 'ggjoy', 'na.tools')
+lapply(nflpackages, require, character.only = TRUE)
 
-library(nflscrapR)
+pbp_splits_2019 <- readRDS("~/GitHub/nflscrapR/data-scrapR/splits-data/pbp_splits_2019.rds")
 
 # Extract the game IDs for each season then use the purrr package
 # to get the season data. This is done instead of the season_play_by_play()
@@ -10,48 +10,19 @@ library(nflscrapR)
 # the games in a season.
 
 game_ids_19 <- extracting_gameids(2019)
-
-# Now get each season's play-by-play by mapping the game_play_by_play() 
-# function to each game id (and check there are 256 unique ids)
-
-# Access magrittr:
-# install_packages("magrittr")
-library(magrittr)
-
-# Install purrr and dplyr:
-#  install_packages("purrr")
-#  install_packages("dplyr")
-
-pbp_2019 <- purrr::map_dfr(game_ids_19, game_play_by_play) %>%
+games_played <- pbp_splits_2019 %>% pull(GameID) %>% unique()
+game_ids_19 <- setdiff(game_ids_19, games_played)
+new_pbp_2019 <- purrr::map_dfr(game_ids_19, game_play_by_play) %>%
   dplyr::mutate(Season = 2019)
 
-# During current season, use week number by 16
-length(unique(pbp_2019$GameID)) == 32 
+new_pbp_splits_2019 <- bind_rows(pbp_splits_2019, new_pbp_2019)
 
-# Access the tidyverse:
-# install.packages("tidyverse")
-library(tidyverse)
-
-# Each file is saved individually
-write_csv(pbp_2019, "~/GitHub/nflscrapR/data-scrapR/splits_data/pbp_2019.csv")
-write_csv(pbp_2019, "~/GitHub/nflscrapR/data-scrapR/legacy_data/season_play_by_play/pbp_2019.csv")
-
-#Optional Read-in data from previous years
-# pbp_2009 <- read_csv("~/GitHub/nflscrapR/data-scrapR/legacy_data/season_play_by_play/pbp_2009.csv")
-# pbp_2010 <- read_csv("~/GitHub/nflscrapR/data-scrapR/legacy_data/season_play_by_play/pbp_2010.csv")
-# pbp_2011 <- read_csv("~/GitHub/nflscrapR/data-scrapR/legacy_data/season_play_by_play/pbp_2011.csv")
-# pbp_2012 <- read_csv("~/GitHub/nflscrapR/data-scrapR/legacy_data/season_play_by_play/pbp_2012.csv")
-# pbp_2013 <- read_csv("~/GitHub/nflscrapR/data-scrapR/legacy_data/season_play_by_play/pbp_2013.csv")
-# pbp_2014 <- read_csv("~/GitHub/nflscrapR/data-scrapR/legacy_data/season_play_by_play/pbp_2014.csv")
-# pbp_2015 <- read_csv("~/GitHub/nflscrapR/data-scrapR/legacy_data/season_play_by_play/pbp_2015.csv")
-# pbp_2016 <- read_csv("~/GitHub/nflscrapR/data-scrapR/legacy_data/season_play_by_play/pbp_2016.csv")
-# pbp_2017 <- read_csv("~/GitHub/nflscrapR/data-scrapR/legacy_data/season_play_by_play/pbp_2017.csv")
-# pbp_2018 <- read_csv("~/GitHub/nflscrapR/data-scrapR/legacy_data/season_play_by_play/pbp_2018.csv")
-
+saveRDS(new_pbp_splits_2019, "~/GitHub/nflscrapR/data-scrapR/splits-data/pbp_splits_2019.rds")
+write_csv(new_pbp_splits_2019, "~/GitHub/nflscrapR/data-scrapR/splits-data/pbp_splits_2019.csv")
 
 # Helper function to return the player's most common
 # name associated with the ID:
-library(magrittr)
+
 find_player_name <- function(player_names){
   if (length(player_names) == 0) {
     result <- "None"
@@ -63,10 +34,9 @@ find_player_name <- function(player_names){
 }
 
 #Bind the seasons together to make one dataset:
-pbp_data <- rbind.data.frame(pbp_2009, pbp_2010, pbp_2011, pbp_2012, pbp_2013, pbp_2014, pbp_2015, pbp_2016, pbp_2017, pbp_2018, pbp_2019)
 
-pbp_data <- pbp_2019
-
+pbp_data <- new_pbp_splits_2019
+  
 #CALCULATE SPLITS from \nflscrapR-data\R\legacy_code\init_data.R"
 # Define the functions to generate the statistics:
 
@@ -313,9 +283,9 @@ season_rushing_df <- calc_rushing_splits(c("Season","Rusher_ID"), pbp_data) %>%
   filter(Rusher_ID != "None") %>% arrange(Season,desc(Carries))
 
 # Save each file
-write_csv(season_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/2019_season_passing_df.csv")
-write_csv(season_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/2019_season_receiving_df.csv")
-write_csv(season_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/2019_season_rushing_df.csv")
+write_csv(season_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/2019_season_passing_df.csv")
+write_csv(season_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/2019_season_receiving_df.csv")
+write_csv(season_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/2019_season_rushing_df.csv")
 
 # Season level for each team:
 team_season_passing_df <- calc_passing_splits(c("Season","posteam"), pbp_data) %>%
@@ -336,12 +306,12 @@ team_def_season_receiving_df <- calc_receiving_splits(c("Season","DefensiveTeam"
 team_def_season_rushing_df <- calc_rushing_splits(c("Season","DefensiveTeam"), pbp_data) %>%
   arrange(Season,desc(Carries)) %>% rename(Team=DefensiveTeam)
 
-write_csv(team_season_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/team_season_passing_df.csv")
-write_csv(team_season_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/team_season_receiving_df.csv")
-write_csv(team_season_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/team_season_rushing_df.csv")
-write_csv(team_def_season_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/team_def_season_passing_df.csv")
-write_csv(team_def_season_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/team_def_season_receiving_df.csv")
-write_csv(team_def_season_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/team_def_season_rushing_df.csv")
+write_csv(team_season_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/team_season_passing_df.csv")
+write_csv(team_season_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/team_season_receiving_df.csv")
+write_csv(team_season_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/team_season_rushing_df.csv")
+write_csv(team_def_season_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/team_def_season_passing_df.csv")
+write_csv(team_def_season_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/team_def_season_receiving_df.csv")
+write_csv(team_def_season_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/team_def_season_rushing_df.csv")
 
 
 
@@ -359,7 +329,7 @@ game_rushing_df <- calc_rushing_splits(c("GameID","Rusher_ID","posteam","Defensi
   filter(Rusher_ID != "None") %>% arrange(GameID,desc(Carries))  %>% rename(Team=posteam,
                                                                             Opponent=DefensiveTeam)
 # Save each file
-write_csv(game_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/game_passing_df.csv")
-write_csv(game_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/game_receiving_df.csv")
-write_csv(game_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/game_rushing_df.csv")
+write_csv(game_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/game_passing_df.csv")
+write_csv(game_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/game_receiving_df.csv")
+write_csv(game_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/game_rushing_df.csv")
 
