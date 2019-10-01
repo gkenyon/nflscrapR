@@ -3,16 +3,16 @@ lapply(nflpackages, require, character.only = TRUE)
 
 #write_csv works best
 
-setwd("~/GitHub/nflscrapR/data/RAW")
+setwd("~/GitHub/nflscrapR/data-scrapR/raw")
 
 # Update 2019 season as it progresses:
 reg_pbp_19 <- read_csv("~/GitHub/nflscrapR/data-scrapR/raw/reg_pbp_2019.csv")
 
-# Latest week - just modify the week number:
-new_week_pbp_19 <- scrape_season_play_by_play(2019, type = "reg", weeks = 3)
+# Latest week - MODIFY WEEK:
+new_week_pbp_19 <- scrape_season_play_by_play(2019, type = "reg", weeks = 4)
+write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/pbp_wk4.csv")
 
 #Write CSV as latest_week
-write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/pbp_wk3.csv")
 write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/new_week_pbp_2019.csv")
 new_week_pbp_19 <- read_csv("~/GitHub/nflscrapR/data-scrapR/raw/new_week_pbp_2019.csv")
 
@@ -20,6 +20,7 @@ new_week_pbp_19 <- read_csv("~/GitHub/nflscrapR/data-scrapR/raw/new_week_pbp_201
 reg_pbp_19 <- dplyr::bind_rows(reg_pbp_19, new_week_pbp_19)
 write_csv(reg_pbp_19, "~/GitHub/nflscrapR/data-scrapR/raw/reg_pbp_2019.csv")
 write_csv(reg_pbp_19, "~/GitHub/nflscrapR/data-scrapR/pbp_2019.csv")
+saveRDS(reg_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/pbp_2019.rds")
 
 #Keep only Runs and Passes for 2019
 pbp <- read_csv("reg_pbp_2019.csv")
@@ -58,9 +59,8 @@ saveRDS(reg_pbp_all_rp, "~/Github/nflscrapR/data-scrapR/reg_pbp_all_rp.rds")
 # saveRDS(pbp_all, file="~/Github/nflscrapR/data-scrapR/raw/pbp_all.rds")
 # 
 # 
-# #aDOT
-# pbp_aDOT <- pbp_all_rp %>%
-#   +   filter(!is.na(receiver_player_name) & play_type == "pass" & down <= 4) %>%
-#   +   group_by(receiver_player_name) %>%
-#   +   summarize(adot = mean(air_yards), targets = n(), catch_rate = sum(complete_pass)/targets) %>%
-#   +   filter(adot >= 5 & targets >= 40)
+#aDOT
+pbp_aDOT <- pbp_data %>%
+filter(PlayType == "Pass") %>%
+group_by("Receiver") %>%
+summarize(adot = mean(air_yards), targets = n(), catch_rate = sum(complete_pass)/targets)
