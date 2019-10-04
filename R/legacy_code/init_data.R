@@ -2,10 +2,10 @@
 # (Make sure devtools is installed with:
 #  install_packages("devtools")
 # )
-
-devtools::install_github(repo = "maksimhorowitz/nflscrapR")
-
-# Access nflscrapR:
+# 
+# devtools::install_github(repo = "maksimhorowitz/nflscrapR")
+# 
+# # Access nflscrapR:
 
 library(nflscrapR)
 

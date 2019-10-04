@@ -64,17 +64,16 @@
 "playerstats15"
 
 #' NFL Team Names and Abbreviations
-#' @format Outputs of the season_playergame() function for the 2015 season.  
+#' @format Outputs of the season_playergame() function for the 2016 season.  
 #' This datset used in the vingette for nflscrapR.
 "playerstats16"
 
 #' NFL Team Names and Abbreviations
-#' @format Outputs of the season_playergame() function for the 2015 season.  
+#' @format Outputs of the season_playergame() function for the 2017 season.  
 #' This datset used in the vingette for nflscrapR.
 "playerstats17"
 
 #' NFL Team Names and Abbreviations
-#' @format Outputs of the season_playergame() function for the 2015 season.  
+#' @format Outputs of the season_playergame() function for the 2018 season.  
 #' This datset used in the vingette for nflscrapR.
-"playerstats18"
 "playerstats18"

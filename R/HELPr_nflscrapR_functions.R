@@ -1,51 +1,266 @@
-nflpackages <- c('devtools', 'nflscrapR', 'XML', 'bitops', 'RCurl', 'ggplot2', 'nnet', 'magrittr', 'bindrcpp', 'tidyverse', 'tibble', 'tidyr', 'readr', 'purrr', 'dplyr', 'ggjoy', 'na.tools')
-lapply(nflpackages, require, character.only = TRUE)
+########## HELPER FUNCTIONS ########## https://raw.githubusercontent.com/leesharpe/nfldata/master/code/plays-functions.R
 
-pbp_splits_2019 <- readRDS("~/GitHub/nflscrapR/data-scrapR/splits-data/pbp_splits_2019.rds")
-
-# Extract the game IDs for each season then use the purrr package
-# to get the season data. This is done instead of the season_play_by_play()
-# function to avoid the times when the NFL hates us and prevents the URL
-# from being accessed. So I did it this way to ensure I would get all 
-# the games in a season.
-
-game_ids_19 <- extracting_gameids(2019)
-games_played <- pbp_splits_2019 %>% pull(GameID) %>% unique()
-game_ids_19 <- setdiff(game_ids_19, games_played)
-new_pbp_2019 <- purrr::map_dfr(game_ids_19, game_play_by_play) %>%
-  dplyr::mutate(Season = 2019)
-
-new_pbp_splits_2019 <- bind_rows(pbp_splits_2019, new_pbp_2019)
-
-saveRDS(new_pbp_splits_2019, "~/GitHub/nflscrapR/data-scrapR/splits-data/pbp_splits_2019.rds")
-write_csv(new_pbp_splits_2019, "~/GitHub/nflscrapR/data-scrapR/splits-data/pbp_splits_2019.csv")
-
-# Helper function to return the player's most common
-# name associated with the ID:
-
-find_player_name <- function(player_names){
-  if (length(player_names) == 0) {
-    result <- "None"
-  } else{
-    table_name <- table(player_names)
-    result <- names(table_name)[which.max(table_name)]
-  }
-  return(result)
+# report progress to console
+report <- function(msg)
+{
+  print(paste0(Sys.time(),": ",msg))
 }
 
-#Bind the seasons together to make one dataset:
+# look for text in names of columns of data frame
+grep_col <- function(x,df=plays)
+{
+  return(colnames(df)[grepl(x,colnames(df))])
+}
 
-pbp_data <- new_pbp_splits_2019
+# fix inconsistent data types
+fix_inconsistent_data_types <- function(p)
+{
+  p <- p %>% 
+    mutate(game_id=as.character(game_id),
+           play_id=as.numeric(play_id),
+           time=substr(as.character(time),1,5),
+           down=as.numeric(down),
+           blocked_player_id=as.character(blocked_player_id),
+           fumble_recovery_2_yards=as.numeric(fumble_recovery_2_yards),
+           fumble_recovery_2_player_id=as.character(fumble_recovery_2_player_id),
+           forced_fumble_player_2_player_id=as.character(forced_fumble_player_2_player_id))
+  return(p)
+}
+
+# fix team abbreviations
+## by default this just makes every team have the same abbreviation all season
+## use old_to_new=TRUE to make teams that have moved use the new abbreviation in the past
+fix_team_abbreviations <- function(p,old_to_new=FALSE)
+{
+  for (col in grep_col("team",p))
+  {
+    x <- p %>% pull(col)
+    if (typeof(x) == "character")
+    {
+      p[,col] <- case_when(
+        x == "JAC" ~ "JAX",
+        x == "LA" ~ "LAR",
+        x == "SD" & old_to_new ~ "LAC",
+        x == "STL" & old_to_new ~ "LAR",
+        TRUE ~ x)
+    }
+  }
+  return(p)
+}
+
+########## FUNCTIONS TO APPLY ADDITIONAL DATA ##########
+
+# game data
+apply_game_data <- function(p)
+{
+  if (!("alt_game_id" %in% colnames(p)))  # already included, don't reapply
+  {
+    report("Applying game data")    
+    games <- read_csv("http://www.habitatring.com/games.csv")
+    games <- games %>%
+      mutate(game_id=as.character(game_id))
+    p <- p %>% 
+      fix_inconsistent_data_types() %>% 
+      inner_join(games,by=c("game_id"="game_id","away_team"="away_team","home_team"="home_team"))
+  }
+  return(p)
+}
+
+# mutations from Ben Baldwin (and some code from Keegan Abdoo)
+## taken from https://gist.github.com/guga31bb/5634562c5a2a7b1e9961ac9b6c568701
+apply_baldwin_mutations <- function(p)
+{
+  report("Applying Ben Baldwin mutations")
+  p <- p %>% 
+    mutate(
+      # identify passes and rushes
+      ## note this treats qb scrambles as passes since a pass was called
+      pass=ifelse(str_detect(desc,"(pass)|(sacked)|(scramble)"),1,0),
+      rush=ifelse(str_detect(desc,"(left end)|(left tackle)|(left guard)|(up the middle)|(right guard)|(right tackle)|(right end)") & pass == 0,1,0),
+      # plays are defined as successful when EPA is positive
+      success=ifelse(is.na(epa),NA,ifelse(epa>0,1,0)),
+      # fix player name fields so they aren't NA on penalty plays
+      ## code for this from Keenan Abdoo
+      passer_player_name=ifelse(play_type == "no_play" & pass == 1, 
+                                str_extract(desc,"(?<=\\s)[A-Z][a-z]*\\.\\s?[A-Z][A-z]+(\\s(I{2,3})|(IV))?(?=\\s((pass)|(sack)|(scramble)))"),
+                                passer_player_name),
+      receiver_player_name=ifelse(play_type == "no_play" & str_detect(desc, "pass"), 
+                                  str_extract(desc,"(?<=to\\s)[A-Z][a-z]*\\.\\s?[A-Z][A-z]+(\\s(I{2,3})|(IV))?"),
+                                  receiver_player_name),
+      rusher_player_name=ifelse(play_type == "no_play" & rush == 1, 
+                                str_extract(desc,"(?<=\\s)[A-Z][a-z]*\\.\\s?[A-Z][A-z]+(\\s(I{2,3})|(IV))?(?=\\s((left end)|(left tackle)|(left guard)|(up the middle)|(right guard)|(right tackle)|(right end)))"),
+                                rusher_player_name),
+      # this is shorthand so "name" is the QB (if pass) or runner (if run)
+      name=ifelse(!is.na(passer_player_name),passer_player_name,rusher_player_name),
+      # set yards_gained to be NA on penalties rather then 0
+      yards_gained=ifelse(play_type == "no_play",NA,yards_gained),
+      # easy filter: play is 1 if a "normal" play (including penalties), or 0 otherwise
+      play=ifelse(!is.na(epa) & !is.na(posteam) & play_type %in% c("no_play","pass","run"),1,0))
+  return(p)
+}
+
+# add series data
+## series = 
+##  starts at 1, each new first down increments, numbers shared across both teams
+##  NA: kickoffs, extra point/two point conversion attempts, non-plays, no posteam
+##  Note: Also is broken for 2013 @ CLE gamesin Week 12 & 13 games due to nflscrapR data issues
+## series_success =
+##  1: scored touchdown, gained enough yards for first down
+##  0: punt, interception, fumble lost, turnover on downs, 4th down FG attempt or punt
+##  NA: series is NA, series contains QB spike/kneel, half ended with none of above
+apply_series_data <- function(p)
+{
+  report("Applying series and series success")
   
-#CALCULATE SPLITS from \nflscrapR-data\R\legacy_code\init_data.R"
-# Define the functions to generate the statistics:
-
+  # identify broken games
+  broken_games <- unique(p$game_id[is.na(p$yards_gained)
+                                   & !(is.na(p$play_type) | p$play_type == "no_play")])
+  
+  # add in series and series_success variables
+  p <- p %>% mutate(series=NA,series_success=0)
+  
+  # initialize loop trackers
+  p$series[min(which(p$play_type != "kickoff"))] <- 1
+  p$series_success[1:(min(which(p$play_type != "kickoff"))-1)] <- NA
+  series <- 1
+  lb <- 1
+  
+  # play loop
+  for (r in (min(which(p$play_type != "kickoff"))+1):nrow(p))
+  {
+    
+    # progress report
+    if (r %% 10000 == 0) report(paste("Series Data:",r,"of",nrow(p),"plays"))
+    
+    # skip broken games or no-description plays
+    if (p$game_id[r] %in% broken_games || is.na(p$desc[r]))
+    {
+      lb <- lb + 1
+      next
+    }
+    
+    # if posteam is not defined or is a timeout, mark as a non-series and skip
+    if (is.na(p$posteam[r]) || substr(p$desc[r],1,7) == "Timeout")
+    {
+      p$series[r] <- NA
+      p$series_success[r] <- NA
+      lb <- lb + 1
+      next
+    }
+    
+    # game has changed
+    if (p$game_id[r] != p$game_id[r-lb]) 
+    {
+      if (p$yards_gained[r-lb] >= p$ydstogo[r-lb])
+      {
+        p$series_success[p$game_id == p$game_id[r-lb] & p$series == series] <- 1
+      } else if (any(p$play_type[p$game_id == p$game_id[r] & p$series == series]
+                     %in% c("qb_kneel","qb_spike"))) {
+        p$series_success[p$game_id == p$game_id[r] & p$series == series] <- NA        
+      } else if (p$down[r-lb] == 4) {
+        p$series_success[p$game_id == p$game_id[r-lb] & p$series == series] <- 0
+      } else {
+        p$series_success[p$game_id == p$game_id[r-lb] & p$series == series] <- NA
+      }
+      series <- 1
+      # beginning of 2nd half or overtime
+    } else if (p$qtr[r] != p$qtr[r-lb] && (p$qtr[r] == 3 || p$qtr[r] >= 5)) {
+      if (p$yards_gained[r-lb] >= p$ydstogo[r-lb])
+      {
+        p$series_success[p$game_id == p$game_id[r] & p$series == series] <- 1
+      } else if (any(p$play_type[p$game_id == p$game_id[r] & p$series == series]
+                     %in% c("qb_kneel","qb_spike"))) {
+        p$series_success[p$game_id == p$game_id[r] & p$series == series] <- NA
+      } else if (p$down[r-lb] == 4) {
+        p$series_success[p$game_id == p$game_id[r-lb] & p$series == series] <- 0        
+      } else {
+        p$series_success[p$game_id == p$game_id[r] & p$series == series] <- NA
+      }
+      series <- series + 1
+      # or drive has changed  
+    } else if (p$drive[r] != p$drive[r-lb]) {
+      if (p$yards_gained[r-lb] >= p$ydstogo[r-lb])
+      {
+        p$series_success[p$game_id == p$game_id[r] & p$series == series] <- 1
+      } else if (any(p$play_type[p$game_id == p$game_id[r] & p$series == series]
+                     %in% c("qb_kneel","qb_spike"))) {
+        p$series_success[p$game_id == p$game_id[r] & p$series == series] <- NA
+      }
+      series <- series + 1
+      # first down or NA down with last play having enough yards or defensive penalty
+    } else if ((is.na(p$down[r]) || p$down[r] == 1) &&
+               ((!is.na(p$yards_gained[r-lb]) && p$yards_gained[r-lb] >= p$ydstogo[r-lb])
+                || any(p$first_down_penalty[(r-lb):(r-1)] == 1,na.rm=TRUE))) {
+      if (p$play_type[r-lb] != "kickoff" ||
+          any(p$first_down_penalty[(r-lb):(r-1)] == 1,na.rm=TRUE))
+      {
+        p$series_success[p$game_id == p$game_id[r] & p$series == series] <- 1
+      }
+      series <- series + 1
+      # blocked field goal the same team recovered
+    } else if (!is.na(p$down[r]) && p$down[r] == 1 &&
+               !is.na(p$field_goal_result[r-lb]) &&
+               p$field_goal_result[r-lb] == "blocked" &&
+               p$posteam[r-lb] == p$posteam[r]) {
+      p$series_success[p$game_id == p$game_id[r] & p$series == series] <- 0
+      series <- series + 1
+    }
+    
+    # mark series for kickoffs as NA
+    if (!is.na(p$play_type[r]) && p$play_type[r] == "kickoff")
+    {
+      p$series_success[r] <- NA
+      series <- series - 1  # otherwise it would advance 2, want to advance 1
+    } else if ((!is.na(p$play_type[r]) && p$play_type[r] == "extra_point") ||
+               (!is.na(p$two_point_attempt[r]) && p$two_point_attempt[r] == 1)) {
+      p$series_success[r] <- NA
+      series <- series - 1  # otherwise it would advance 2, want to advance 1
+      # mark series for all other p
+    } else {
+      p$series[r] <- series
+    }
+    
+    # if this is a real play, reset lookback to 1, otherwise increment it
+    ## the looback defines the "previous" play
+    ## we want to skip this for p that don't actually affect series data
+    if (is.na(p$play_type[r]) || p$play_type[r] == "no_play" ||
+        p$play_type[r] == "extra_point" || is.na(p$posteam[r]) ||
+        (!is.na(p$two_point_attempt[r]) && p$two_point_attempt[r] == 1))
+    {
+      lb <- lb + 1
+    } else {
+      lb <- 1
+    }
+    
+  }
+  
+  # handle final series in the data
+  lb <- 0
+  while(is.na(p$play_type[nrow(p)-lb]) || p$play_type[nrow(p)-lb] == "no_play")
+  {
+    lb <- lb + 1
+  }
+  if (p$yards_gained[nrow(p)-lb] >= p$ydstogo[nrow(p)-lb])
+  {
+    p$series_success[p$game_id == p$game_id[nrow(p)-lb] & p$series == series] <- 1
+  } else if (any(p$play_type[p$game_id == p$game_id[r] & p$series == series]
+                 %in% c("qb_kneel","qb_spike"))) {
+    p$series_success[p$game_id == p$game_id[r] & p$series == series] <- NA    
+  } else if (p$down[nrow(p)-lb] == 4) {
+    p$series_success[p$game_id == p$game_id[nrow(p)-lb] & p$series == series] <- 0
+  } else {
+    p$series_success[p$game_id == p$game_id[nrow(p)] & p$series == series] <- NA
+  }
+  
+  report(paste("Series Data Complete!"))
+  return(p)
+}
 calc_passing_splits <- function(splits,pbp_df) {
   split_groups <- lapply(splits, as.symbol)
   # Filter to only pass attempts and add the GameDrive column:
   pbp_df <- pbp_df %>% filter(PassAttempt == 1 & PlayType != "No Play") %>%
     mutate(GameDrive = paste(as.character(GameID), as.character(Drive), sep = "-"))
-  pass_output <- pbp_df %>% group_by(.dots=split_groups) %>%
+  pass_output <- pbp_df %>% group_by_(.dots=split_groups) %>%
     summarise(Player_Name = find_player_name(Passer[which(!is.na(Passer))]),
               Attempts = n(),Completions = sum(Reception,na.rm=TRUE),
               Drives = n_distinct(GameDrive),
@@ -133,7 +348,7 @@ calc_passing_splits <- function(splits,pbp_df) {
               yac_Success_Rate = length(which(yacEPA>0)) / Attempts,
               yac_Rec_Success_Rate = length(which((Reception*yacEPA)>0)) / Attempts,
               yac_Win_Success_Rate = length(which(yacWPA>0)) / Attempts,
-              yac_Comp_Win_Success_Rate = length(which((Reception*yacWPA)>0)) / Attempts)
+              yac_Comp_Win_Success_Rate = length(which((Reception*yacWPA)>0))/ Attempts)
   return(pass_output)
 }
 
@@ -142,7 +357,7 @@ calc_rushing_splits <- function(splits,pbp_df) {
   # Filter to only rush attempts:
   pbp_df <- pbp_df %>% filter(RushAttempt == 1 & PlayType != "No Play") %>%
     mutate(GameDrive = paste(as.character(GameID), as.character(Drive),sep="-"))
-  rush_output <- pbp_df %>% group_by(.dots=split_groups) %>%
+  rush_output <- pbp_df %>% group_by_(.dots=split_groups) %>%
     summarise(Player_Name = find_player_name(Rusher[which(!is.na(Rusher))]),
               Carries = n(),
               Drives = n_distinct(GameDrive),
@@ -169,7 +384,7 @@ calc_rushing_splits <- function(splits,pbp_df) {
               WPA_Ratio = sum(as.numeric(WPA>0)*WPA,na.rm=TRUE)/sum(abs(WPA),na.rm=TRUE),
               Total_Clutch_EPA = sum(EPA*abs(WPA),na.rm=TRUE),
               Clutch_EPA_per_Car = Total_Clutch_EPA / Carries,
-              Clutch_EPA_per_Drive = Total_Clutch_EPA / Drives)
+              Clutch_EPA_per_Drive = Total_Clutch_EPA / Drives) 
   return(rush_output)
 }
 
@@ -178,7 +393,7 @@ calc_receiving_splits <- function(splits,pbp_df) {
   # Filter to only pass attempts:
   pbp_df <- pbp_df %>% filter(PassAttempt == 1 & PlayType != "No Play") %>%
     mutate(GameDrive = paste(as.character(GameID), as.character(Drive),sep="-"))
-  rec_output <- pbp_df %>% group_by(.dots=split_groups) %>%
+  rec_output <- pbp_df %>% group_by_(.dots=split_groups) %>%
     summarise(Player_Name = find_player_name(Receiver[which(!is.na(Receiver))]),
               Targets = n(), Receptions = sum(Reception,na.rm=TRUE),
               Drives = n_distinct(GameDrive),
@@ -269,67 +484,14 @@ calc_receiving_splits <- function(splits,pbp_df) {
               air_Rec_Win_Success_Rate = length(which((Reception*airWPA)>0)) / Targets)
   return(rec_output)
 }
-
-# First generate stats at the Season level for each player,
-# removing the observations with missing player names:
-
-season_passing_df <- calc_passing_splits(c("Season","Passer_ID"), pbp_data) %>%
-  filter(Passer_ID != "None") %>% arrange(Season,desc(Attempts))
-
-season_receiving_df <- calc_receiving_splits(c("Season","Receiver_ID"), pbp_data) %>%
-  filter(Receiver_ID != "None") %>% arrange(Season,desc(Targets))
-
-season_rushing_df <- calc_rushing_splits(c("Season","Rusher_ID"), pbp_data) %>%
-  filter(Rusher_ID != "None") %>% arrange(Season,desc(Carries))
-
-# Save each file
-write_csv(season_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/2019_season_passing_df.csv")
-write_csv(season_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/2019_season_receiving_df.csv")
-write_csv(season_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/2019_season_rushing_df.csv")
-
-# Season level for each team:
-team_season_passing_df <- calc_passing_splits(c("Season","posteam"), pbp_data) %>%
-  arrange(Season,desc(Attempts)) %>% rename(Team=posteam)
-
-team_season_receiving_df <- calc_receiving_splits(c("Season","posteam"), pbp_data) %>%
-  arrange(Season,desc(Targets)) %>% rename(Team=posteam)
-
-team_season_rushing_df <- calc_rushing_splits(c("Season","posteam"), pbp_data) %>%
-  arrange(Season,desc(Carries)) %>% rename(Team=posteam)
-
-team_def_season_passing_df <- calc_passing_splits(c("Season","DefensiveTeam"), pbp_data) %>%
-  arrange(Season,desc(Attempts)) %>% rename(Team=DefensiveTeam)
-
-team_def_season_receiving_df <- calc_receiving_splits(c("Season","DefensiveTeam"), pbp_data) %>%
-  arrange(Season,desc(Targets)) %>% rename(Team=DefensiveTeam)
-
-team_def_season_rushing_df <- calc_rushing_splits(c("Season","DefensiveTeam"), pbp_data) %>%
-  arrange(Season,desc(Carries)) %>% rename(Team=DefensiveTeam)
-
-write_csv(team_season_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/team_season_passing_df.csv")
-write_csv(team_season_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/team_season_receiving_df.csv")
-write_csv(team_season_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/team_season_rushing_df.csv")
-write_csv(team_def_season_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/team_def_season_passing_df.csv")
-write_csv(team_def_season_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/team_def_season_receiving_df.csv")
-write_csv(team_def_season_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/team_def_season_rushing_df.csv")
-
-
-
-# Game level:
-
-game_passing_df <- calc_passing_splits(c("GameID","Passer_ID","posteam","DefensiveTeam"), pbp_data) %>%
-  filter(Passer_ID != "None") %>% arrange(GameID,desc(Attempts)) %>% rename(Team=posteam,
-                                                                            Opponent=DefensiveTeam)
-
-game_receiving_df <- calc_receiving_splits(c("GameID","Receiver_ID","posteam","DefensiveTeam"), pbp_data) %>%
-  filter(Receiver_ID != "None") %>% arrange(GameID,desc(Targets))  %>% rename(Team=posteam,
-                                                                              Opponent=DefensiveTeam)
-
-game_rushing_df <- calc_rushing_splits(c("GameID","Rusher_ID","posteam","DefensiveTeam"), pbp_data) %>%
-  filter(Rusher_ID != "None") %>% arrange(GameID,desc(Carries))  %>% rename(Team=posteam,
-                                                                            Opponent=DefensiveTeam)
-# Save each file
-write_csv(game_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/game_passing_df.csv")
-write_csv(game_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/game_receiving_df.csv")
-write_csv(game_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits-data/game_rushing_df.csv")
-
+find_player_name <- function(player_names){
+  if (length(player_names) == 0) {
+    result <- "None"
+  } else{
+    table_name <- table(player_names)
+    result <- names(table_name)[which.max(table_name)]
+  }
+  return(result)
+}
+# Baldwin Penalties -------------------------------------------------------
+#https://gist.github.com/guga31bb/5634562c5a2a7b1e9961ac9b6c568701#advanced-fix-player-names-on-plays-with-penalties

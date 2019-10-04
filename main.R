@@ -15,6 +15,7 @@ write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/pbp_wk4.csv")
 #Write CSV as latest_week
 write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/new_week_pbp_2019.csv")
 new_week_pbp_19 <- read_csv("~/GitHub/nflscrapR/data-scrapR/raw/new_week_pbp_2019.csv")
+new_week_pbp_19 <- apply_baldwin_mutations(new_week_pbp_19)
 
 # Append to the data and save:
 reg_pbp_19 <- dplyr::bind_rows(reg_pbp_19, new_week_pbp_19)
@@ -37,30 +38,12 @@ pbp_rp_19 <- pbp_rp %>% filter(pass==1 | rush==1)
 write_csv(pbp_rp, "~/Github/nflscrapR/data-scrapR/raw/2019_pbp_rp.csv")
 
 #Read in old data, join and save.
-pbp_all_rp <- readRDS("~/GitHub/nflscrapR/data-scrapR/pbp_all_rp.rds")
+pbp_all_rp <- readRDS("~/GitHub/nflscrapR/data-scrapR/reg_pbp_all_rp.rds")
 reg_pbp_all_rp <- dplyr::bind_rows(pbp_all_rp, pbp_rp_19)
 saveRDS(reg_pbp_all_rp, "~/Github/nflscrapR/data-scrapR/reg_pbp_all_rp.rds")
 
-#Pulling together multiple seasons
-
-# first <- 2010 #first season to grab. min available=2009
-# last <- 2019 # most recent season
-# 
-# datalist = list()
-# for (yr in first:last) {
-#   pbp <- read_csv(paste0("~/GitHub/nflscrapR/scrapR-data/play_by_play_data/regular_season/reg_pbp_", yr, ".csv"))
-#   games <- read_csv(paste0("~/GitHub/nflscrapR/scrapR-data/games_data/regular_season/reg_games_", yr, ".csv"))
-#   pbp <- pbp %>% inner_join(games %>% distinct(game_id, week, season)) %>% select(-fumble_recovery_2_yards, -blocked_player_id)
-#   datalist[[yr]] <- pbp # add it to your list
-# }
-# 
-# pbp_all <- bind_rows(datalist)
-# write_csv(pbp_all, "~/Github/nflscrapR/data-scrapR/raw/pbp_all.csv")
-# saveRDS(pbp_all, file="~/Github/nflscrapR/data-scrapR/raw/pbp_all.rds")
-# 
-# 
-#aDOT
+# aDOT --------------------------------------------------------------------
 pbp_aDOT <- pbp_data %>%
-filter(PlayType == "Pass") %>%
-group_by("Receiver") %>%
-summarize(adot = mean(air_yards), targets = n(), catch_rate = sum(complete_pass)/targets)
+  filter(PlayType == "Pass") %>%
+  group_by("Receiver") %>%
+  summarize(adot = mean(air_yards), targets = n(), catch_rate = sum(complete_pass)/targets)

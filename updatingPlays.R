@@ -53,7 +53,7 @@ if (exists("plays"))
       apply_game_data()
     
     # additional optional modifications
-    if (baldwin_mutations) new_plays <- apply_baldwin_mutations(new_plays)
+    if (baldwin_mutations) new_plays <- apply_baldwin_mutations(new_plays)a
     if (series_data) new_plays <- apply_series_data(new_plays)
     
     # finally merge things together
