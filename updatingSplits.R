@@ -257,8 +257,8 @@ saveRDS(pbp_2019, "~/GitHub/nflscrapR/data-scrapR/splits_data/pbp_splits_2019.rd
 write_csv(pbp_2019, "~/GitHub/nflscrapR/data-scrapR/splits_data/pbp_2019.csv")
 
 #New data to calculate splits
+pbp_data <- readRDS("~/GitHub/nflscrapR/data-scrapR/splits_data/pbp_splits_201901.rds")
 
-pbp_data <- pbp_2019
 # First generate stats at the Season level for each player,
 # removing the observations with missing player names:
 
@@ -296,12 +296,13 @@ team_def_season_rushing_df <- calc_rushing_splits(c("Season","DefensiveTeam"), p
   arrange(Season,desc(Carries)) %>% rename(Team=DefensiveTeam)
 
 # Save each file
-write_csv(team_season_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/2019_season _df/2019_team_season_passing_df.csv")
-write_csv(team_season_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/2019_season _df/2019_team_season_receiving_df.csv")
-write_csv(team_season_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/2019_season _df/2019_team_season_rushing_df.csv")
-write_csv(team_def_season_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/2019_season _df/2019_team_def_season_passing_df.csv")
-write_csv(team_def_season_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/2019_season _df/2019_team_def_season_receiving_df.csv")
-write_csv(team_def_season_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/2019_season _df/2019_team_def_season_rushing_df.csv")
+setwd("~/GitHub/nflscrapR/data-scrapR/splits_data/2019_season _df")
+write_csv(team_season_passing_df, "./2019_team_season_passing_df.csv")
+write_csv(team_season_receiving_df, "./2019_team_season_receiving_df.csv")
+write_csv(team_season_rushing_df, "./2019_team_season_rushing_df.csv")
+write_csv(team_def_season_passing_df, "./2019_team_def_season_passing_df.csv")
+write_csv(team_def_season_receiving_df, "./2019_team_def_season_receiving_df.csv")
+write_csv(team_def_season_rushing_df, "./2019_team_def_season_rushing_df.csv")
 
 # Game level:
 
@@ -315,6 +316,6 @@ game_rushing_df <- calc_rushing_splits(c("GameID","Rusher_ID","posteam","Defensi
   filter(Rusher_ID != "None") %>% arrange(GameID,desc(Carries))  %>% rename(Team=posteam,
                                                                             Opponent=DefensiveTeam)
 # Save each file
-write_csv(game_passing_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/2019_season _df/2019_game_passing_df.csv")
-write_csv(game_receiving_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/2019_season _df/2019_game_receiving_df.csv")
-write_csv(game_rushing_df, "~/GitHub/nflscrapR/data-scrapR/splits_data/2019_season _df/2019_game_rushing_df.csv")
+write_csv(game_passing_df, "./2019_game_passing_df.csv")
+write_csv(game_receiving_df, "./2019_game_receiving_df.csv")
+write_csv(game_rushing_df, "./2019_game_rushing_df.csv")
