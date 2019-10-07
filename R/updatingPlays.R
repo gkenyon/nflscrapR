@@ -3,7 +3,7 @@ source("https://raw.githubusercontent.com/leesharpe/nfldata/master/code/plays-fu
 ########## INPUTS ##########
 
 # filename to store plays
-plays_filename = "~/GitHub/nflscrapR/data-scrapR/data-sharpe/reg_pbp_all_splits.rds" # replace this with file where you want to play data
+plays_filename = "~/GitHub/nflscrapR/data-scrapR/data-sharpe/reg_pbp_all.rds" # replace this with file where you want to play data
 baldwin_mutations <- TRUE   # do you want to apply Ben Baldwin's mutations?
 series_data <- TRUE         # do you want to apply series data?
 
@@ -20,7 +20,7 @@ games <- games %>%
 report("Loading existing plays data")
 old_warning_level <- getOption("warn")
 options(warn=-1)
-tryCatch(plays <- readRDS(plays_filename),error=report) %>% mutate(game_idGameID=as.character())
+tryCatch(plays <- readRDS(plays_filename),error=report)
 options(warn=old_warning_level)
 
 ########## ADD MISSING GAMES ##########
@@ -53,7 +53,7 @@ if (exists("plays"))
       apply_game_data()
     
     # additional optional modifications
-    if (baldwin_mutations) new_plays <- apply_baldwin_mutations(new_plays)
+    if (baldwin_mutations) new_plays <- apply_baldwin_mutations(new_plays)a
     if (series_data) new_plays <- apply_series_data(new_plays)
     
     # finally merge things together
@@ -106,3 +106,7 @@ if (exists("plays"))
   saveRDS(plays,file=plays_filename)
   
 }
+
+#[1] "2019-09-15 13:47:55: Importing 2019 regular season"
+#Error in open.connection(con, "rb") : HTTP error 404.
+

@@ -9,8 +9,8 @@ setwd("~/GitHub/nflscrapR/data-scrapR/raw")
 reg_pbp_19 <- read_csv("~/GitHub/nflscrapR/data-scrapR/raw/reg_pbp_2019.csv")
 
 # Latest week - MODIFY WEEK:
-new_week_pbp_19 <- scrape_season_play_by_play(2019, type = "reg", weeks = 4)
-write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/pbp_wk4.csv")
+new_week_pbp_19 <- scrape_season_play_by_play(2019, type = "reg", weeks = 5)
+write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/pbp_wk5.csv")
 
 #Write CSV as latest_week
 write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/new_week_pbp_2019.csv")
