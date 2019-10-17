@@ -1,21 +1,25 @@
 library(tidyverse)
+# gbg <- scrape_game_ids(2019, type="reg")
+# write_csv(gbg_2019, "~/GitHub/nflscrapR/data-scrapR/games_data/regular_season/reg_games_2019.csv")
+
 #read in our csvs #####
-pbp = read_csv("~/GitHub/nfl-dashboard-dfs/appdata/pbp.csv")
-gbg = read_csv("~/GitHub/nfl-dashboard-dfs/appdata/gbg.csv")
-rosters = read_csv("~/GitHub/nfl-dashboard-dfs/appdata/rosters.csv")
+gbg <- read_csv("~/GitHub/nflscrapR/data-scrapR/games_data/regular_season/reg_games_2019.csv") %>% 
+  mutate(year = substr(game_id, 1,4))
+pbp <- read_csv("~/GitHub/nflscrapR/data-scrapR/pbp_2019.csv") %>%  
+  mutate(year = substr(game_id, 1,4))
+roster <- read_csv("~/GitHub/nflscrapR/data-scrapR/roster_data/regular_season/reg_roster_2019.csv") %>% 
+  rename(year = season) %>% select(-year)
+
 pbp_df = pbp
 gbg_df = gbg
-rosters_df = rosters
+rosters_df = roster
 min_year = min(pbp_df$year,na.rm =T)
 
-
 #left_join in the game by game info we need #####
-pbp_df = gbg_df %>% 
-  rename(home_final_score = home_score,  away_final_score = away_score, year = season) %>% 
-  select(-state_of_game, -game_url, -type) %>% 
-  mutate(year = as.numeric(year)) %>% 
+pbp_df <- gbg_df %>% 
+  rename(home_final_score = home_score,  away_final_score = away_score) %>%
   right_join(pbp_df, by = c("game_id","year","home_team","away_team"))
-write_csv(pbp_df, ".~/GitHub/nfl-dashboard-dfs/appdata/pbp_joined.csv")
+write_csv(pbp_df, "~/GitHub/nfl-dashboard-dfs/appdata/pbp_joined.csv")
 
 #(re)exploring the data #####
 #noticed something weird in the qb_scramble column, investigating
@@ -45,7 +49,7 @@ pbp_df_adj = pbp_df %>%
     wk_ovr_rk = dense_rank(gamewk),
     #combine Rusher_ID and Receiver_ID variable into a skillplayer ID, 'skill_ID'
     skill_ID = ifelse(play_type2=="run",rusher_player_id,ifelse(
-                      play_type2=="dropback",receiver_player_id,NA)),
+      play_type2=="dropback",receiver_player_id,NA)),
     #combine Passer_ID and QB-scramble Rusher_ID into a dropboack_ID, 'dropback_ID'
     dropback_ID = ifelse(qb_dropback==1, ifelse(
       qb_scramble==1,skill_ID,passer_player_id),"None"),
@@ -59,12 +63,11 @@ pbp_df_adj = pbp_df %>%
 
 #create the max_wk gvar, also needed to "look back" n weeks in the past #####
 max_wk = max(pbp_df_adj$wk_ovr_rk, na.rm = T)
+write_csv(pbp_df_adj, "~/GitHub/nfl-dashboard-dfs/appdata/pbp_df_adj.csv")
 
-
-#write_csv(pbp_df_adj, path = paste0(app_path,'pbp_df.csv'))
 #adjust the rosters_df for shiny consumption #####
 rosters_df = rosters_df %>%
-  mutate(player_info = paste0(player_info = paste0(Player,", ", Pos))) %>%
+  mutate(player_info = paste0(player_info = paste0(full_player_name,", ", position))) %>%
   write_csv("~/GitHub/nfl-dashboard-dfs/appdata/rosters_df.csv")
 
 
@@ -95,7 +98,7 @@ pbp_df_adj %>% filter(
 
 
 #df for tab-3, QB analysis #####
-pbp_df_adj %>% 
+qb_pbp_adj <- pbp_df_adj %>% 
   filter(
     dropback_ID != "None",
     !is.na(home_wp),
@@ -118,8 +121,8 @@ pbp_df_adj %>%
     pacr = yards_gained/adj_opp_yds,
     epa = epa,
     wpa = wpa
-  ) %>% left_join(rosters_df, by = c("year", "dropback_ID" = "GSIS_ID")) %>%
-  write_csv('~/GitHub/nfl-dashboard-dfs/appdata/qb_df.csv')
+  ) %>% left_join(rosters_df, by = c("year", "dropback_ID" = "gsis_id"))
+write_csv(qb_pbp_adj, '~/GitHub/nfl-dashboard-dfs/appdata/qb_df.csv')
 
 #df for tab-4, skill player analysis #####
 team_agg_df = pbp_df_adj %>% 
@@ -164,8 +167,7 @@ skill_df = pbp_df_adj %>%
     racr = yards_gained/adj_opp_yds,
     epa = epa,
     wpa = wpa
-  ) %>% left_join(rosters_df, by = c("year", "skill_ID" = "GSIS_ID")) %>%
-  select(-name) %>% 
+  ) %>% left_join(rosters_df, by = c("skill_ID" = "gsis_id")) %>%
   mutate(Pos_grp = ifelse(Pos == "QB", "QB", ifelse(Pos %in% c("RB","FB"), "RB", "REC"))) %>%
   left_join(team_agg_df, by = c("game_id", "posteam")) %>% 
   group_by(skill_ID, game_id) %>%
@@ -176,7 +178,7 @@ skill_df = pbp_df_adj %>%
     ms_team_air_yards = round(sum(opp_yds)/mean(team_air_yards),3),
     wopr = round(1/2.2 * (1.5 * ms_team_targets + 0.7 * ms_team_targets),3),
     awopr = round(1/2.2 * (1.5 * ms_team_opportunities + 0.7 * ms_team_targets),3)
-    ) %>%
+  ) %>%
   write_csv("~/GitHub/nfl-dashboard-dfs/appdata/skill_df.csv")
 
 #df for tab-5, exploration #####
@@ -184,7 +186,7 @@ pbp_explore = pbp_df_adj %>%
   select(
     play_id, game_id, matchup, wk_ovr_rk, gamewk, game_seconds_remaining,
     play_type, ep, wp, epa, wpa, yards_gained, touchdown
-    )  %>%
+  )  %>%
   write_csv("~/GitHub/nfl-dashboard-dfs/appdata/explore_df.csv")
 
 explore_df %>% 

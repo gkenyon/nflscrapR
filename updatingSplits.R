@@ -4,7 +4,8 @@ library(tidyverse)
 library(dplyr)
 library(purrr)
 #Splits Require PlayByPlayBoxScore.R scrape data (PassAttempt Data, could be rectified by making qb_dropback=1 count as a PassAttempt?)
-#Load Functions
+
+# Load Functions ----------------------------------------------------------
 find_player_name <- function(player_names){
   if (length(player_names) == 0) {
     result <- "None"
@@ -242,6 +243,8 @@ calc_receiving_splits <- function(splits,pbp_df) {
   return(rec_output)
 }
 
+# Read in Previous Weeks Data ---------------------------------------------
+
 pbp_2019 <- read_rds("~/GitHub/nflscrapR/data-scrapR/splits_data/pbp_splits_2019.rds")
 
 # Extract the game IDs for each season, compare to GameIDs already in pbp
@@ -257,7 +260,7 @@ saveRDS(pbp_2019, "~/GitHub/nflscrapR/data-scrapR/splits_data/pbp_splits_2019.rd
 write_csv(pbp_2019, "~/GitHub/nflscrapR/data-scrapR/splits_data/pbp_2019.csv")
 
 #New data to calculate splits
-pbp_data <- readRDS("~/GitHub/nflscrapR/data-scrapR/splits_data/pbp_splits_201901.rds")
+pbp_data <- readRDS("~/GitHub/nflscrapR/data-scrapR/splits_data/pbp_splits_2019.rds")
 
 # First generate stats at the Season level for each player,
 # removing the observations with missing player names:
