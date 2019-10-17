@@ -20,7 +20,7 @@ new_week_pbp_19 <- read_csv("~/GitHub/nflscrapR/data-scrapR/raw/new_week_pbp_201
 reg_pbp_19 <- dplyr::bind_rows(reg_pbp_19, new_week_pbp_19)
 write_csv(reg_pbp_19, "~/GitHub/nflscrapR/data-scrapR/raw/reg_pbp_2019.csv")
 write_csv(reg_pbp_19, "~/GitHub/nflscrapR/data-scrapR/pbp_2019.csv")
-saveRDS(reg_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/pbp_2019.rds")
+saveRDS(reg_pbp_19,"~/GitHub/nflscrapR/data-scrapR/pbp_2019.rds")
 
 #Keep only Runs and Passes for 2019
 pbp <- read_csv("reg_pbp_2019.csv")
