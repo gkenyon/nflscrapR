@@ -1,4 +1,7 @@
 library(jsonlite)
+nflpackages <- c('devtools', 'nflscrapR', 'XML', 'bitops', 'RCurl', 'ggplot2', 'nnet', 'magrittr', 'bindrcpp', 'tidyverse', 'tibble', 'tidyr', 'readr', 'purrr', 'dplyr', 'ggjoy', 'na.tools')
+lapply(nflpackages, require, character.only = TRUE)
+
 df_air_wks <- fromJSON('http://airyards.com/2019/weeks')
 write_csv(df_air_wks, "./df_air.csv")
 rec_pos <- c("WR", "TE", "RB")
