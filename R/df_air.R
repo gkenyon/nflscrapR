@@ -3,7 +3,7 @@ nflpackages <- c('devtools', 'nflscrapR', 'XML', 'bitops', 'RCurl', 'ggplot2', '
 lapply(nflpackages, require, character.only = TRUE)
 
 df_air_wks <- fromJSON('http://airyards.com/2019/weeks')
-write_csv(df_air_wks, "./df_air.csv")
+write_csv(df_air_wks, "~/GitHub/nflscrapR/data-scrapR/splits_data/dfs/df_air_weeks.csv")
 rec_pos <- c("WR", "TE", "RB")
 df_air_rec <- df_air_wks %>%
   group_by(player_id, full_name, position, team) %>% 
@@ -25,4 +25,5 @@ df_air_rec <- df_air_wks %>%
       wopr = 1.5 * ms_TAR + 0.7 * ms_AY) %>%
         filter(position %in% rec_pos) %>% 
           arrange(desc(tars))
-saveRDS(df_air_rec, "./df_ay_rec.rds")
+saveRDS(df_air_rec, "~/GitHub/nflscrapR/data-scrapR/splits_data/dfs/df_ay_rec.rds")
+write_csv(df_air_rec, "~/GitHub/nflscrapR/data-scrapR/splits_data/dfs/df_ay_rec.csv")

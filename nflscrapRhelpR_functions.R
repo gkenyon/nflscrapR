@@ -266,7 +266,7 @@ calc_passing_splits <- function(splits,pbp_df) {
               Drives = n_distinct(GameDrive),
               Comp_Perc = Completions / Attempts,
               Total_Yards = sum(Yards.Gained,na.rm = TRUE),
-              Total_Raw_AirYards = sum(AirYards,na.rm=TRUE),
+              Total_Raw_AirYards = sum(AirYards,wrna.rm=TRUE),
               Total_Comp_AirYards = sum(Reception*AirYards, na.rm=TRUE),
               Yards_per_Att = Total_Yards / Attempts,
               Yards_per_Comp = Total_Yards / Completions,
