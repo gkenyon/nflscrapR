@@ -1,6 +1,8 @@
 ########## HELPER FUNCTIONS ########## https://raw.githubusercontent.com/leesharpe/nfldata/master/code/plays-functions.R
 
-# report progress to console
+
+# report progress to console ----------------------------------------------
+
 report <- function(msg)
 {
   print(paste0(Sys.time(),": ",msg))

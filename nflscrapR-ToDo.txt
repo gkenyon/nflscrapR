@@ -1,0 +1,3 @@
+TODO nflscrapR
+
+Combines splits_data with dk data for weekly rosters.

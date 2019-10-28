@@ -81,5 +81,36 @@ wr_df_adj <- pbp_df %>% filter(!is.na(receiver_player_id), play_type=="pass"&qb_
     aDOT = air_yards/target) %>% 
   select(-c(team_dropbacks, team_pass_attempts, team_rush_attempts, team_opportunities, team_air_yards, team_total_yards)) %>% ungroup() %>% filter(target>10) %>% arrange(-target)
 
+saveRDS(qb_df_adj, "~/GitHub/nflscrapR/data-scrapR/splits_data/qb_df_splits_2019.RDS")
+saveRDS(wr_df_adj, "~/GitHub/nflscrapR/data-scrapR/splits_data/wr_df_splits_2019.RDS")
+
+
+
 # select(play_id, game_id, posteam, game_date, desc, play_type, yards_gained, qb_dropback, qb_scramble, air_yards, yards_after_catch, epa, wpa, rush_attempt, pass_attempt, sack, touchdown, pass_touchdown, rush_touchdown, complete_pass, fumble, passer_player_id, passer_player_name, receiver_player_id, receiver_player_name, rusher_player_id, rusher_player_name, pass, rush, success, play_type2, skill_ID, dropback_ID, year)
 
+
+# Misc --------------------------------------------------------------------
+
+#Keep only Runs and Passes for 2019
+pbp_rp <- pbp %>% 
+  filter(!is_na(epa), play_type=="no_play" | play_type=="pass" | play_type=="run")
+
+pbp_rp <- pbp_rp %>%
+  mutate(
+    pass = if_else(str_detect(desc, "(pass)|(sacked)|(scramble)"), 1, 0),
+    rush = if_else(str_detect(desc, "(left end)|(left tackle)|(left guard)|(up the middle)|(right guard)|(right tackle)|(right end)") & pass == 0, 1, 0),
+    success = ifelse(epa>0, 1 , 0)
+  )
+pbp_rp_19 <- pbp_rp %>% filter(pass==1 | rush==1)
+write_csv(pbp_rp, "~/Github/nflscrapR/data-scrapR/raw/2019_pbp_rp.csv")
+
+#Read in old data, join and save.
+pbp_all_rp <- readRDS("~/GitHub/nflscrapR/data-scrapR/reg_pbp_all_rp.rds")
+reg_pbp_all_rp <- dplyr::bind_rows(pbp_all_rp, pbp_rp_19)
+saveRDS(reg_pbp_all_rp, "~/Github/nflscrapR/data-scrapR/reg_pbp_all_rp.rds")
+
+# aDOT --------------------------------------------------------------------
+pbp_aDOT <- pbp_data %>%
+  filter(PlayType == "Pass") %>%
+  group_by("Receiver") %>%
+  summarize(adot = mean(air_yards), targets = n(), catch_rate = sum(complete_pass)/targets)
