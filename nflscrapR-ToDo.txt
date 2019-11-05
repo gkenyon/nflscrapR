@@ -1,3 +1,6 @@
 TODO nflscrapR
 
 Combines splits_data with dk data for weekly rosters.
+Put past player data into .rda format
+Add functions from Lee Sharpe's updating to main scrapR package.
+

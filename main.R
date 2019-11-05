@@ -12,11 +12,11 @@ reg_pbp_19 <- read_csv("~/GitHub/nflscrapR/data-scrapR/raw/reg_pbp_2019.csv")
 game_ids_19 <- extracting_gameids(2019)
 pulled_games <- reg_pbp_19 %>% pull(game_id) %>% unique()
 missing <- setdiff(game_ids_19, pulled_games)
-missing <- missing[-15]
 
 # Latest week - MODIFY WEEK:
+# new_week_pbp_19 <- scrape_season_play_by_play(2019, type = "reg", weeks = 9)
 new_week_pbp_19 <- purrr::map_dfr(missing, scrape_json_play_by_play)
-write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/pbp_wk8.csv")
+write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/pbp_wk9.csv")
 
 #Write CSV as latest_week
 write_csv(new_week_pbp_19,"~/GitHub/nflscrapR/data-scrapR/raw/new_week_pbp_2019.csv")
