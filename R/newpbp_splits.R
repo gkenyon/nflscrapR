@@ -1,7 +1,7 @@
 nflpackages <- c('devtools', 'nflscrapR', 'XML', 'bitops', 'RCurl', 'ggplot2', 'nnet', 'magrittr', 'bindrcpp', 'tidyverse', 'tibble', 'tidyr', 'readr', 'purrr', 'dplyr', 'ggjoy', 'na.tools')
 lapply(nflpackages, require, character.only = TRUE)
 
-pbp <- read_csv("~/GitHub/nflscrapR/data-scrapR/pbp_2019.csv")
+pbp <- read_rds("./pbp_2019.rds")
 # pbp <- scrape_season_play_by_play(2019, type = "reg") if fresh is needed, able to ensure unique plays by using pbp %>% mutate(playck = paste0(game_id,play_id)) %>% distinct(playck, .keep_all = TRUE)
 
 pbp_df <- pbp %>%

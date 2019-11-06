@@ -1,11 +1,10 @@
-source("https://raw.githubusercontent.com/leesharpe/nfldata/master/code/plays-functions.R")
-
 ########## INPUTS ##########
 
 # filename to store plays
-plays_filename = "~/GitHub/nflscrapR/data-scrapR/data-sharpe/reg_pbp_all.rds" # replace this with file where you want to play data
-baldwin_mutations <- TRUE   # do you want to apply Ben Baldwin's mutations?
-series_data <- TRUE         # do you want to apply series data?
+source("https://raw.githubusercontent.com/leesharpe/nfldata/master/code/plays-functions.R")
+plays_filename = "~/GitHub/nflscrapR/pbp_2019.rds" # replace this with file where you want to play data
+baldwin_mutations <- FALSE   # do you want to apply Ben Baldwin's mutations?
+series_data <- FALSE         # do you want to apply series data?
 
 ########## LOAD DATA ##########
 
@@ -13,7 +12,7 @@ series_data <- TRUE         # do you want to apply series data?
 report("Loading game data")
 games <- read_csv("http://www.habitatring.com/games.csv")
 games <- games %>%
-  filter(season >= 2009 & !is.na(result)) %>% 
+  filter(season == 2019 & !is.na(result)) %>% 
   mutate(game_id=as.character(game_id))
 
 # load previous data
@@ -53,7 +52,7 @@ if (exists("plays"))
       apply_game_data()
     
     # additional optional modifications
-    if (baldwin_mutations) new_plays <- apply_baldwin_mutations(new_plays)a
+    if (baldwin_mutations) new_plays <- apply_baldwin_mutations(new_plays)
     if (series_data) new_plays <- apply_series_data(new_plays)
     
     # finally merge things together
@@ -70,7 +69,12 @@ if (exists("plays"))
   
   # no plays variable, so we're from scratch
   report("No play data found, loading plays from scratch")
-  seasons <- games %>% filter(!is.na(result)) %>% pull(season) %>% unique()
+  seasons <- games %>%
+    group_by(season) %>% 
+    summarize(count=n()) %>% 
+    ungroup() %>% 
+    filter(count == 267) %>% 
+    pull(season)
   plays <- NULL
   
   # season loop
@@ -106,7 +110,3 @@ if (exists("plays"))
   saveRDS(plays,file=plays_filename)
   
 }
-
-#[1] "2019-09-15 13:47:55: Importing 2019 regular season"
-#Error in open.connection(con, "rb") : HTTP error 404.
-
