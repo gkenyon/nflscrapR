@@ -1,7 +1,7 @@
 nflpackages <- c('devtools', 'nflscrapR', 'XML', 'bitops', 'RCurl', 'ggplot2', 'nnet', 'magrittr', 'bindrcpp', 'tidyverse', 'tibble', 'tidyr', 'readr', 'purrr', 'dplyr', 'ggjoy', 'na.tools')
 lapply(nflpackages, require, character.only = TRUE)
 
-pbp <- read_rds("./pbp_2019.rds")
+pbp <- read_csv("~/GitHub/nflscrapR/data-scrapR/pbp_2019.csv")
 # pbp <- scrape_season_play_by_play(2019, type = "reg") if fresh is needed, able to ensure unique plays by using pbp %>% mutate(playck = paste0(game_id,play_id)) %>% distinct(playck, .keep_all = TRUE)
 
 pbp_df <- pbp %>%
@@ -81,17 +81,13 @@ wr_df_adj <- pbp_df %>% filter(!is.na(receiver_player_id), play_type=="pass"&qb_
     aDOT = air_yards/target) %>% 
   select(-c(team_dropbacks, team_pass_attempts, team_rush_attempts, team_opportunities, team_air_yards, team_total_yards)) %>% ungroup() %>% filter(target>10) %>% arrange(-target)
 
-saveRDS(qb_df_adj, "~/GitHub/nflscrapR/data-scrapR/splits_data/qb_df_splits_2019.RDS")
-saveRDS(wr_df_adj, "~/GitHub/nflscrapR/data-scrapR/splits_data/wr_df_splits_2019.RDS")
-
-
-
 # select(play_id, game_id, posteam, game_date, desc, play_type, yards_gained, qb_dropback, qb_scramble, air_yards, yards_after_catch, epa, wpa, rush_attempt, pass_attempt, sack, touchdown, pass_touchdown, rush_touchdown, complete_pass, fumble, passer_player_id, passer_player_name, receiver_player_id, receiver_player_name, rusher_player_id, rusher_player_name, pass, rush, success, play_type2, skill_ID, dropback_ID, year)
 
 
 # Misc --------------------------------------------------------------------
 
 #Keep only Runs and Passes for 2019
+pbp <- read_csv("reg_pbp_2019.csv")
 pbp_rp <- pbp %>% 
   filter(!is_na(epa), play_type=="no_play" | play_type=="pass" | play_type=="run")
 

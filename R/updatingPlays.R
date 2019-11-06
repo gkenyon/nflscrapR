@@ -12,7 +12,7 @@ series_data <- FALSE         # do you want to apply series data?
 report("Loading game data")
 games <- read_csv("http://www.habitatring.com/games.csv")
 games <- games %>%
-  filter(season == 2019 & !is.na(result)) %>% 
+  filter(season == 2019 & !is.na(result)) %>%
   mutate(game_id=as.character(game_id))
 
 # load previous data
@@ -30,7 +30,7 @@ if (exists("plays"))
   # we have data! identify any missing games
   pulled_games <- plays %>% pull(game_id) %>% unique()
   missing <- games %>% filter(!(game_id %in% pulled_games)) %>% pull(game_id)
-  
+
   # handle missing games
   if (length(missing) > 0)
   {
@@ -41,42 +41,42 @@ if (exists("plays"))
       report(paste0("Scraping plays from game: ",g))
       game_plays <- scrape_json_play_by_play(g)
       game_plays <- game_plays %>%
-        fix_inconsistent_data_types() %>% 
+        fix_inconsistent_data_types() %>%
         fix_team_abbreviations()
       new_plays <- bind_rows(new_plays,game_plays)
     }
-    
+
     # apply game data to new plays
     report("Adding in game data for new plays")
     new_plays <- new_plays %>%
       apply_game_data()
-    
+
     # additional optional modifications
     if (baldwin_mutations) new_plays <- apply_baldwin_mutations(new_plays)
     if (series_data) new_plays <- apply_series_data(new_plays)
-    
+
     # finally merge things together
     report("Merging existing plays and new plays")
     plays <- bind_rows(plays,new_plays) %>% arrange(game_id,play_id)
     saveRDS(plays,plays_filename)
     rm(new_plays)  # no need for this to take up memory anymore
-    
+
   }
-  
+
   ########## FRESH DOWNLOAD ##########
-  
+
 } else {
-  
+
   # no plays variable, so we're from scratch
   report("No play data found, loading plays from scratch")
   seasons <- games %>%
-    group_by(season) %>% 
-    summarize(count=n()) %>% 
-    ungroup() %>% 
-    filter(count == 267) %>% 
+    group_by(season) %>%
+    summarize(count=n()) %>%
+    ungroup() %>%
+    filter(count == 267) %>%
     pull(season)
   plays <- NULL
-  
+
   # season loop
   for (s in seasons)
   {
@@ -91,22 +91,22 @@ if (exists("plays"))
     post <- post %>% fix_inconsistent_data_types()
     plays <- bind_rows(plays,post)
   }
-  
+
   # remove these, no need to take up memory, it's all in plays now
   rm(reg)
   rm(post)
-  
+
   # fix team abbreviations and merge with game data
   report("Merging play and game data")
   plays <- plays %>%
-    fix_team_abbreviations() %>% 
+    fix_team_abbreviations() %>%
     apply_game_data()
-  
+
   # additional optional modifications
   if (baldwin_mutations) plays <- apply_baldwin_mutations(plays)
   if (series_data) plays <- apply_series_data(plays)
-  
+
   # save
-  saveRDS(plays,file=plays_filename)
-  
+  saveRDS(plays, file=plays_filename)
+
 }

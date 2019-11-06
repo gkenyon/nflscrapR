@@ -2,10 +2,51 @@ nflpackages <- c('devtools', 'nflscrapR', 'XML', 'bitops', 'RCurl', 'ggplot2', '
 lapply(nflpackages, require, character.only = TRUE)
 #read in our csvs #####
 #Import QB Season and Team Season Data Frames
+player_2019_passing_df <- read_csv("~/GitHub/nflscrapR/data-scrapR/splits_data/2019_season _df/2019_season_passing_df.csv") %>% 
+  select(
+    Season, Passer_ID, Player_Name, Completions, Attempts, TDs, Air_TDs, Ints=Interceptions, Total_Yards, Total_Raw_AirYards, aDot=Raw_AirYards_per_Att, compAirYards=Total_Comp_AirYards, PACR, aPACR, Total_EPA, Total_WPA
+    )
 
+roster <- read_csv("~/GitHub/nflscrapR/data-scrapR/roster_data/regular_season/reg_roster_2019.csv") %>% select(full_player_name, team, position, gsis_id)
+
+player_2019_passing_df <- player_2019_passing_df %>%  left_join(roster, by = c( "Passer_ID" = "gsis_id"))
+
+# Get data from URL via HTTR ----------------------------------------------
+library(httr)
+url <- "https://www.pro-football-reference.com/years/2019/passing.htm"
+urldata <- GET(url)
+data <- readHTMLTable(rawToChar(urldata$content),
+                      stringsAsFactors = FALSE)
+passing_df <- data$passing 
+passing_cols <- c(2,3,5,24,25)
+sacks_df <-  passing_df[passing_cols] %>% filter(Pos=="QB") %>% select(
+  Player_Name = Player, Sacks = Sk, SackYds = Yds)
+sacks_df$Sacks <- as.numeric(as.character(sacks_df$Sacks))
+sacks_df$SackYds <- as.numeric(as.character(sacks_df$SackYds))
+
+# Join Sacks with Passing DF ----------------------------------------------
+
+qbs_df_joined <- left_join(player_2019_passing_df, sacks_df, by = c("full_player_name" = "Player_Name")) %>% 
+  mutate(
+    AYA = (Total_Yards + 10*(Air_TDs) - 45*(Ints)) / Attempts,
+    ANYA = (Total_Yards+10*(Air_TDs)-45*(Ints)-SackYds) / (Attempts + Sacks))
+
+dfs_qbs <- skill_df_joined %>% 
+  select(
+    Passer_ID, full_player_name, position, Completions, Attempts, TDs, Air_TDs, Ints, Total_Yards, Total_Raw_AirYards, aDot, compAirYards, PACR, aPACR, AYA, ANYA, Total_EPA, Total_WPA)
+
+write_csv(dfs_qbs, "~/GitHub/nflscrapR/data-scrapR/splits_data/dfs/dfs_qbs.csv")
+dfs_qbs <- read_csv("~/GitHub/nflscrapR/data-scrapR/splits_data/dfs/dfs_qbs.csv")
+
+# Join with Number Fire ---------------------------------------------------
+
+dfs_receiver <- left_join(dfs_receiver, NF_recs, by=c("full_player_name" = "player"))
+dfs_receiver <- left_join(dfs_receiver, dvoa_def, by=c("opp_team" = "TEAM"))
+write_csv(dfs_receiver, "~/GitHub/nflscrapR/data-scrapR/splits_data/dfs/dfs_qbs.csv")
 
 # Join DVOA ---------------------------------------------------------------
 
+dfs_qbs <- left_join(dfs_qbs, NF_qbs, by=c("full_player_name" = "player"))
 url <- "https://www.footballoutsiders.com/stats/teamdef/2019"
 urldata <- GET(url)
 data <- readHTMLTable(rawToChar(urldata$content),
@@ -20,8 +61,8 @@ col_types = cols(DEFENSEDVOA = col_number(),
 `NON-ADJTOTAL` = col_number(), PASSDEF = col_number(),
 RUSHDEF = col_number()))
 
-qb_df_adj <- left_join(qb_df_adj, dvoa_def, by=c("opp_team" = "TEAM"))
-write_csv(qb_df_adj, "~/GitHub/nflscrapR/data-scrapR/splits_data/dfs/qb_df_adj.csv")
+dfs_qbs <- left_join(dfs_qbs, dvoa_def, by=c("opp_team" = "TEAM"))
+write_csv(dfs_qbs, "~/GitHub/nflscrapR/data-scrapR/splits_data/dfs/dfs_qbs.csv")
 
 # Advanced Stats Glossary -------------------------------------------------
 
