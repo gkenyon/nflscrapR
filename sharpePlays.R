@@ -3,9 +3,9 @@ source("https://raw.githubusercontent.com/leesharpe/nfldata/master/code/plays-fu
 ########## INPUTS ##########
 
 # filename to store plays
-plays_filename = "~/GitHub/nflscrapR/data-scrapR/raw/pbp_2009_2019wk10.rds" # replace this with file where you want to play data
+plays_filename = "~/GitHub/nflscrapR/pbp_2019.rds" # replace this with file where you want to play data
 baldwin_mutations <- TRUE   # do you want to apply Ben Baldwin's mutations?
-comp_prob <- TRUE           # do you want to apply completion probability?
+comp_prob <- FALSE           # do you want to apply completion probability?
 series_data <- FALSE         # do you want to apply series data?
 
 ## NOTE: you must set baldwin_mutations to TRUE to get comp_prob
@@ -16,7 +16,7 @@ series_data <- FALSE         # do you want to apply series data?
 report("Loading game data")
 games <- read_csv("http://www.habitatring.com/games.csv")
 games <- games %>%
-  filter(season >= 2009 & !is.na(result)) %>% 
+  filter(season >= 2019 & !is.na(result)) %>% 
   mutate(game_id=as.character(game_id))
 
 # load previous data
@@ -26,62 +26,15 @@ options(warn=-1)
 tryCatch(plays <- readRDS(plays_filename),error=report)
 options(warn=old_warning_level)
 
-########## FRESH DOWNLOAD OF COMPLETED SEASONS ##########
-
-if (!exists("plays"))
-{
-  
-  # no plays variable, so we're from scratch
-  report("No play data found, loading plays from scratch")
-  seasons <- games %>%
-    group_by(season) %>% 
-    summarize(count=n()) %>% 
-    ungroup() %>% 
-    filter(count == 267) %>% 
-    pull(season)
-  plays <- NULL
-  
-  # season loop
-  for (s in seasons)
-  {
-    # regular season
-    report(paste("Importing",s,"regular season"))
-    reg <- read_csv(paste0("https://raw.githubusercontent.com/ryurko/nflscrapR-data/master/play_by_play_data/regular_season/reg_pbp_",s,".csv"))
-    reg <- reg %>% fix_inconsistent_data_types()
-    plays <- bind_rows(plays,reg)
-    # playoffs
-    report(paste("Importing",s,"playoffs"))
-    post <- read_csv(paste0("https://raw.githubusercontent.com/ryurko/nflscrapR-data/master/play_by_play_data/post_season/post_pbp_",s,".csv"))
-    post <- post %>% fix_inconsistent_data_types()
-    plays <- bind_rows(plays,post)
-  }
-  
-  # remove these, no need to take up memory, it's all in plays now
-  rm(reg)
-  rm(post)
-  
-  # fix team abbreviations and merge with game data
-  report("Merging play and game data")
-  plays <- plays %>%
-    fix_team_abbreviations() %>% 
-    apply_game_data()
-  
-  # additional optional modifications
-  if (baldwin_mutations) plays <- apply_baldwin_mutations(plays)
-  if (baldwin_mutations & comp_prob)
-    plays <- apply_completion_probability(plays)
-  if (series_data) plays <- apply_series_data(plays)
-}
-
 ########## INITIAL COMP PROBABILITY ##########
 
 # temporarily here to help people who want to add cp to existing data
-if (exists("plays") & baldwin_mutations & comp_prob &
-    !("cp" %in% colnames(plays)))
-{
-  plays <- apply_completion_probability(plays)
-  saveRDS(plays,plays_filename)
-}
+# if (exists("plays") & baldwin_mutations & comp_prob &
+#     !("cp" %in% colnames(plays)))
+# {
+#   plays <- apply_completion_probability(plays)
+#   saveRDS(plays,plays_filename)
+# }
 
 ########## SCRAPE GAMES IN CURRENT SEASON ##########
 
@@ -118,11 +71,9 @@ if (length(missing) > 0)
     
     # save after each game
     saveRDS(plays,plays_filename)
+    report("Saving new plays")
   }
-  
-pbp_2019 <- plays %>% filter(season==2019)
-saveRDS(pbp_2019, "~/GitHub/nflscrapR/pbp_2019.rds")
-  
+
   # no need for this to take up memory anymore
   rm(game_plays)
   rm(new_plays)
